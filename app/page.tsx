@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
   type Lang = "sl" | "mk" | "sr" | "hr" | "en" | "it";
@@ -1903,8 +1903,177 @@ export default function Home() {
   const reviewsTitleBottom = t.reviewsSection.titleBottom.split("\n");
   const contactTitleBottom = t.contactSection.titleBottom.split("\n");
 
+  const [isPreloading, setIsPreloading] = useState(true);
+  const [scrollY, setScrollY] = useState(0);
+  const [processProgress, setProcessProgress] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [activeGalleryIndex, setActiveGalleryIndex] = useState<number | null>(
+    null,
+  );
+  const processSectionRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setIsPreloading(false);
+    }, 1200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (ticking) return;
+
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        setScrollY(window.scrollY || 0);
+
+        const processSection = processSectionRef.current;
+        if (processSection) {
+          const rect = processSection.getBoundingClientRect();
+          const viewportHeight = window.innerHeight || 1;
+          const start = viewportHeight * 0.82;
+          const end = -rect.height * 0.14;
+          const rawProgress = (start - rect.top) / (start - end);
+          const clampedProgress = Math.min(1, Math.max(0, rawProgress));
+
+          setProcessProgress((prev) => {
+            if (Math.abs(prev - clampedProgress) < 0.005) return prev;
+            return clampedProgress;
+          });
+        }
+
+        ticking = false;
+      });
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const applyPreference = () => {
+      setPrefersReducedMotion(mediaQuery.matches);
+    };
+
+    applyPreference();
+    mediaQuery.addEventListener("change", applyPreference);
+
+    return () => {
+      mediaQuery.removeEventListener("change", applyPreference);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeGalleryIndex === null) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveGalleryIndex(null);
+      } else if (event.key === "ArrowRight") {
+        setActiveGalleryIndex((prev) => {
+          if (prev === null) return prev;
+          return (prev + 1) % gallery.length;
+        });
+      } else if (event.key === "ArrowLeft") {
+        setActiveGalleryIndex((prev) => {
+          if (prev === null) return prev;
+          return (prev - 1 + gallery.length) % gallery.length;
+        });
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activeGalleryIndex, gallery.length]);
+
+  useEffect(() => {
+    const revealElements = document.querySelectorAll<HTMLElement>(".reveal");
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("reveal-in");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      {
+        threshold: 0.16,
+        rootMargin: "0px 0px -7% 0px",
+      },
+    );
+
+    for (const element of revealElements) {
+      observer.observe(element);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const heroParallax = Math.min(scrollY * 0.16, 130);
+  const orbParallaxA = Math.min(scrollY * 0.1, 180);
+  const orbParallaxB = Math.min(scrollY * 0.06, 140);
+  const servicesParallax = Math.min(Math.max((scrollY - 260) * 0.04, 0), 56);
+  const packagesParallax = Math.min(Math.max((scrollY - 760) * -0.032, -52), 0);
+  const packagesAura = Math.min(Math.max((scrollY - 640) / 980, 0), 1);
+  const galleryParallax = Math.min(Math.max((scrollY - 1380) * 0.035, 0), 64);
+  const contactParallax = Math.min(Math.max((scrollY - 2300) * -0.03, -44), 0);
+
+  const goToNextGallery = () => {
+    setActiveGalleryIndex((prev) => {
+      if (prev === null) return prev;
+      return (prev + 1) % gallery.length;
+    });
+  };
+
+  const goToPrevGallery = () => {
+    setActiveGalleryIndex((prev) => {
+      if (prev === null) return prev;
+      return (prev - 1 + gallery.length) % gallery.length;
+    });
+  };
+
   return (
     <>
+      <div
+        className={`preloader ${isPreloading ? "is-visible" : "is-hidden"}`}
+        aria-hidden={!isPreloading}
+      >
+        <div className="preloader-mark" />
+        <p className="preloader-title">AVTO DETAILING BRANE</p>
+        <p className="preloader-sub">Premium finish in motion</p>
+      </div>
+
+      <div className="parallax-orbs" aria-hidden="true">
+        <span
+          className="parallax-orb orb-a"
+          style={{ transform: `translate3d(0, ${orbParallaxA}px, 0)` }}
+        />
+        <span
+          className="parallax-orb orb-b"
+          style={{ transform: `translate3d(0, ${orbParallaxB}px, 0)` }}
+        />
+      </div>
+
       <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/70 border-b border-border">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 py-5 flex items-center justify-between">
           <a href="#top" className="flex items-baseline gap-2">
@@ -1939,25 +2108,20 @@ export default function Home() {
             <label htmlFor="lang" className="sr-only">
               {t.languageLabel}
             </label>
-            <div className="select-wrap min-w-[5.3rem]">
-              <select
-                id="lang"
-                name="lang"
-                value={lang}
-                onChange={(e) => setLang(e.target.value as Lang)}
-                className="fancy-select text-[0.72rem] tracking-[0.18em] uppercase"
-                aria-label={t.languageLabel}
-              >
-                {languageOptions.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <span className="select-chevron" aria-hidden="true">
-                ▾
-              </span>
-            </div>
+            <select
+              id="lang"
+              name="lang"
+              value={lang}
+              onChange={(e) => setLang(e.target.value as Lang)}
+              className="bg-background/80 border border-input px-3 py-2 text-[0.7rem] tracking-[0.15em] text-cream uppercase focus:outline-none focus:border-gold"
+              aria-label={t.languageLabel}
+            >
+              {languageOptions.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <a href="#kontakt" className="btn-gold !py-3 !px-5 text-[0.7rem]">
               {t.nav.reserve}
             </a>
@@ -1975,12 +2139,15 @@ export default function Home() {
           fill
           priority
           className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            transform: `translate3d(0, ${-heroParallax}px, 0) scale(1.08)`,
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/40" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-background/40" />
 
         <div className="relative w-full max-w-[1400px] mx-auto px-6 lg:px-12 pb-16 lg:pb-24 pt-32 grid lg:grid-cols-12 gap-10 items-end">
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 reveal reveal-1">
             <div className="flex items-center gap-3 mb-8">
               <span className="hairline" />
               <span className="eyebrow">{t.hero.badge}</span>
@@ -2010,13 +2177,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="lg:col-span-4 hidden lg:block">
+          <div className="lg:col-span-4 hidden lg:block reveal reveal-2">
             <div className="relative aspect-[4/5] overflow-hidden border border-gold/30">
               <Image
                 src="/portrait.jpg"
                 alt="Branislav Javorski pri delu"
                 fill
                 className="w-full h-full object-cover"
+                style={{
+                  transform: `translate3d(0, ${heroParallax * 0.32}px, 0) scale(1.02)`,
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -2033,7 +2203,8 @@ export default function Home() {
           {pillars.map((it, i) => (
             <div
               key={it.t}
-              className={`py-12 lg:py-16 lg:px-10 ${i > 0 ? "md:border-l border-border" : ""}`}
+              className={`reveal py-12 lg:py-16 lg:px-10 ${i > 0 ? "md:border-l border-border" : ""}`}
+              style={{ animationDelay: `${120 + i * 90}ms` }}
             >
               <div className="serif-italic text-gold text-3xl mb-4">
                 0{i + 1}
@@ -2048,7 +2219,10 @@ export default function Home() {
       </section>
 
       <section id="storitve" className="py-24 lg:py-36">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div
+          className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
+          style={{ transform: `translate3d(0, ${servicesParallax}px, 0)` }}
+        >
           <div className="grid lg:grid-cols-12 gap-10 mb-16">
             <div className="lg:col-span-5">
               <div className="flex items-center gap-3 mb-6">
@@ -2077,7 +2251,8 @@ export default function Home() {
             {services.map((s) => (
               <div
                 key={s.n}
-                className="grid md:grid-cols-12 gap-6 py-10 border-b border-border group hover:bg-card/40 transition px-2 md:px-0"
+                className="reveal service-interactive grid md:grid-cols-12 gap-6 py-10 border-b border-border group transition px-2 md:px-0"
+                style={{ animationDelay: `${80 + Number(s.n) * 70}ms` }}
               >
                 <div className="md:col-span-1 serif-italic text-gold text-2xl">
                   {s.n}
@@ -2107,9 +2282,17 @@ export default function Home() {
 
       <section
         id="paketi"
-        className="py-24 lg:py-36 border-y border-border bg-card/20"
+        className="relative py-24 lg:py-36 border-y border-border bg-card/20 overflow-hidden"
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div
+          className="packages-ambient"
+          aria-hidden="true"
+          style={{ opacity: 0.28 + packagesAura * 0.52 }}
+        />
+        <div
+          className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
+          style={{ transform: `translate3d(0, ${packagesParallax}px, 0)` }}
+        >
           <div className="grid lg:grid-cols-12 gap-10 mb-16">
             <div className="lg:col-span-6">
               <div className="flex items-center gap-3 mb-6">
@@ -2140,11 +2323,15 @@ export default function Home() {
               <span className="eyebrow">{t.packagesSection.cleaningTitle}</span>
             </div>
             <div className="grid lg:grid-cols-3 gap-4">
-              {cleaningPackages.map((pkg) => (
+              {cleaningPackages.map((pkg, idx) => (
                 <article
                   key={pkg.name}
-                  className="border border-border bg-background/70 p-6 lg:p-7"
+                  className="reveal package-card package-card-cleaning border border-border bg-background/70 p-6 lg:p-7"
+                  style={{
+                    animationDelay: `${140 + cleaningPackages.indexOf(pkg) * 100}ms`,
+                  }}
                 >
+                  <p className="package-chip">0{idx + 1}</p>
                   <h3 className="display text-cream text-2xl mb-5">
                     {pkg.name}
                   </h3>
@@ -2170,11 +2357,15 @@ export default function Home() {
               <span className="eyebrow">{t.packagesSection.polishTitle}</span>
             </div>
             <div className="grid lg:grid-cols-3 gap-4">
-              {polishPackages.map((pkg) => (
+              {polishPackages.map((pkg, idx) => (
                 <article
                   key={pkg.name}
-                  className="border border-border bg-background/70 p-6 lg:p-7"
+                  className="reveal package-card package-card-polish border border-border bg-background/70 p-6 lg:p-7"
+                  style={{
+                    animationDelay: `${160 + polishPackages.indexOf(pkg) * 100}ms`,
+                  }}
                 >
+                  <p className="package-chip">0{idx + 1}</p>
                   <h3 className="display text-cream text-2xl mb-5">
                     {pkg.name}
                   </h3>
@@ -2195,7 +2386,7 @@ export default function Home() {
           </div>
 
           <div className="grid lg:grid-cols-12 gap-4 mb-20">
-            <article className="lg:col-span-8 border border-gold/35 bg-background/80 p-7 lg:p-10">
+            <article className="lg:col-span-8 package-card package-card-vip border border-gold/35 bg-background/80 p-7 lg:p-10">
               <p className="eyebrow mb-3">{t.packagesSection.vipLabel}</p>
               <h3 className="display text-cream text-3xl mb-2">
                 {vipPackage.name}
@@ -2222,7 +2413,7 @@ export default function Home() {
               </p>
             </article>
 
-            <article className="lg:col-span-4 border border-border bg-background/70 p-7 lg:p-8">
+            <article className="lg:col-span-4 package-card package-card-side border border-border bg-background/70 p-7 lg:p-8">
               <p className="eyebrow mb-3">
                 {t.packagesSection.additionalTitle}
               </p>
@@ -2257,30 +2448,64 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-24 lg:py-32 border-y border-border bg-card/30">
+      <section
+        ref={processSectionRef}
+        className="py-24 lg:py-32 border-y border-border bg-card/30"
+      >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="flex items-center gap-3 mb-12">
             <span className="hairline" />
             <span className="eyebrow">{t.processSection.eyebrow}</span>
           </div>
+          <div className="process-progress" aria-hidden="true">
+            <span
+              className="process-progress-fill"
+              style={{ transform: `scaleX(${0.08 + processProgress * 0.92})` }}
+            />
+          </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
-            {processSteps.map((s) => (
-              <div key={s.n} className="bg-background p-8 lg:p-10">
-                <div className="serif-italic text-gold text-3xl mb-6">
-                  {s.n}
+            {processSteps.map((s, i) => {
+              const stepProgress = Math.max(
+                0,
+                Math.min(1, (processProgress - i * 0.2) / 0.33),
+              );
+              const translateY = 40 - stepProgress * 40;
+              const scale = 0.96 + stepProgress * 0.04;
+              const opacity = 0.22 + stepProgress * 0.78;
+
+              return (
+                <div
+                  key={s.n}
+                  className={`process-step-card bg-background p-8 lg:p-10 ${stepProgress > 0.95 ? "is-active" : ""}`}
+                  style={
+                    prefersReducedMotion
+                      ? undefined
+                      : {
+                          transform: `translate3d(0, ${translateY}px, 0) scale(${scale})`,
+                          opacity,
+                          filter: `blur(${(1 - stepProgress) * 6}px)`,
+                        }
+                  }
+                >
+                  <div className="serif-italic text-gold text-3xl mb-6">
+                    {s.n}
+                  </div>
+                  <h4 className="display text-cream text-xl mb-3">{s.t}</h4>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {s.d}
+                  </p>
                 </div>
-                <h4 className="display text-cream text-xl mb-3">{s.t}</h4>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  {s.d}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
       <section id="galerija" className="py-24 lg:py-36">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div
+          className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
+          style={{ transform: `translate3d(0, ${galleryParallax}px, 0)` }}
+        >
           <div className="grid lg:grid-cols-12 gap-10 mb-16">
             <div className="lg:col-span-6">
               <div className="flex items-center gap-3 mb-6">
@@ -2309,7 +2534,7 @@ export default function Home() {
             {gallery.map((g, i) => (
               <figure
                 key={g.label}
-                className={`relative overflow-hidden group ${i === 0 ? "lg:col-span-2 lg:row-span-2 aspect-square" : "aspect-[4/3]"}`}
+                className={`relative overflow-hidden group gallery-tile ${i === 0 ? "lg:col-span-2 lg:row-span-2 aspect-square" : "aspect-[4/3]"}`}
               >
                 <Image
                   src={g.src}
@@ -2318,6 +2543,15 @@ export default function Home() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-80" />
+                <div className="gallery-tile-action" aria-hidden="true">
+                  Fullscreen
+                </div>
+                <button
+                  type="button"
+                  className="gallery-open-button"
+                  onClick={() => setActiveGalleryIndex(i)}
+                  aria-label={`Open image ${i + 1} in fullscreen`}
+                />
                 <figcaption className="absolute bottom-4 left-4 right-4 eyebrow text-cream/90">
                   {g.label}
                 </figcaption>
@@ -2326,6 +2560,63 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {activeGalleryIndex !== null && (
+        <div
+          className="gallery-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Fullscreen gallery"
+        >
+          <button
+            type="button"
+            className="gallery-lightbox-backdrop"
+            onClick={() => setActiveGalleryIndex(null)}
+            aria-label="Close fullscreen gallery"
+          />
+          <div className="gallery-lightbox-panel" role="document">
+            <button
+              type="button"
+              className="gallery-lightbox-close"
+              onClick={() => setActiveGalleryIndex(null)}
+            >
+              Close
+            </button>
+
+            <button
+              type="button"
+              className="gallery-lightbox-nav left"
+              onClick={goToPrevGallery}
+              aria-label="Previous image"
+            >
+              ‹
+            </button>
+
+            <div className="gallery-lightbox-media">
+              <Image
+                key={gallery[activeGalleryIndex].src}
+                src={gallery[activeGalleryIndex].src}
+                alt={gallery[activeGalleryIndex].label}
+                fill
+                className="gallery-lightbox-image"
+              />
+            </div>
+
+            <button
+              type="button"
+              className="gallery-lightbox-nav right"
+              onClick={goToNextGallery}
+              aria-label="Next image"
+            >
+              ›
+            </button>
+
+            <p className="gallery-lightbox-caption">
+              {gallery[activeGalleryIndex].label}
+            </p>
+          </div>
+        </div>
+      )}
 
       <section id="o-nas" className="py-24 lg:py-36 border-y border-border">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid lg:grid-cols-12 gap-12 items-center">
@@ -2465,7 +2756,10 @@ export default function Home() {
       </section>
 
       <section id="kontakt" className="py-24 lg:py-36">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div
+          className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
+          style={{ transform: `translate3d(0, ${contactParallax}px, 0)` }}
+        >
           <div className="flex items-center gap-3 mb-6">
             <span className="hairline" />
             <span className="eyebrow">{t.contactSection.eyebrow}</span>
@@ -2581,26 +2875,16 @@ export default function Home() {
                 <label htmlFor="service" className="eyebrow block mb-2">
                   {t.contactSection.serviceLabel}
                 </label>
-                <div className="select-wrap w-full">
-                  <select
-                    id="service"
-                    name="service"
-                    defaultValue=""
-                    className="fancy-select w-full pr-12"
-                  >
-                    <option value="" disabled>
-                      {t.contactSection.servicePlaceholder}
-                    </option>
-                    {t.contactSection.serviceOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="select-chevron" aria-hidden="true">
-                    ▾
-                  </span>
-                </div>
+                <select
+                  id="service"
+                  name="service"
+                  className="w-full bg-background border border-input px-4 py-3 text-cream focus:outline-none focus:border-gold transition"
+                >
+                  <option>{t.contactSection.servicePlaceholder}</option>
+                  {t.contactSection.serviceOptions.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
