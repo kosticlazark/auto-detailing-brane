@@ -1934,8 +1934,8 @@ export default function Home() {
         if (processSection) {
           const rect = processSection.getBoundingClientRect();
           const viewportHeight = window.innerHeight || 1;
-          const start = viewportHeight * 0.82;
-          const end = -rect.height * 0.14;
+          const start = viewportHeight * 0.84;
+          const end = -rect.height * 0.34;
           const rawProgress = (start - rect.top) / (start - end);
           const clampedProgress = Math.min(1, Math.max(0, rawProgress));
 
@@ -2034,7 +2034,6 @@ export default function Home() {
   const orbParallaxB = Math.min(scrollY * 0.06, 140);
   const servicesParallax = Math.min(Math.max((scrollY - 260) * 0.04, 0), 56);
   const packagesParallax = Math.min(Math.max((scrollY - 760) * -0.032, -52), 0);
-  const packagesAura = Math.min(Math.max((scrollY - 640) / 980, 0), 1);
   const galleryParallax = Math.min(Math.max((scrollY - 1380) * 0.035, 0), 64);
   const contactParallax = Math.min(Math.max((scrollY - 2300) * -0.03, -44), 0);
 
@@ -2282,13 +2281,8 @@ export default function Home() {
 
       <section
         id="paketi"
-        className="relative py-24 lg:py-36 border-y border-border bg-card/20 overflow-hidden"
+        className="py-24 lg:py-36 border-y border-border bg-card/20"
       >
-        <div
-          className="packages-ambient"
-          aria-hidden="true"
-          style={{ opacity: 0.28 + packagesAura * 0.52 }}
-        />
         <div
           className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
           style={{ transform: `translate3d(0, ${packagesParallax}px, 0)` }}
@@ -2326,12 +2320,11 @@ export default function Home() {
               {cleaningPackages.map((pkg, idx) => (
                 <article
                   key={pkg.name}
-                  className="reveal package-card package-card-cleaning border border-border bg-background/70 p-6 lg:p-7"
+                  className="reveal border border-border bg-background/70 p-6 lg:p-7"
                   style={{
-                    animationDelay: `${140 + cleaningPackages.indexOf(pkg) * 100}ms`,
+                    animationDelay: `${140 + idx * 100}ms`,
                   }}
                 >
-                  <p className="package-chip">0{idx + 1}</p>
                   <h3 className="display text-cream text-2xl mb-5">
                     {pkg.name}
                   </h3>
@@ -2360,12 +2353,11 @@ export default function Home() {
               {polishPackages.map((pkg, idx) => (
                 <article
                   key={pkg.name}
-                  className="reveal package-card package-card-polish border border-border bg-background/70 p-6 lg:p-7"
+                  className="reveal border border-border bg-background/70 p-6 lg:p-7"
                   style={{
-                    animationDelay: `${160 + polishPackages.indexOf(pkg) * 100}ms`,
+                    animationDelay: `${160 + idx * 100}ms`,
                   }}
                 >
-                  <p className="package-chip">0{idx + 1}</p>
                   <h3 className="display text-cream text-2xl mb-5">
                     {pkg.name}
                   </h3>
@@ -2386,7 +2378,7 @@ export default function Home() {
           </div>
 
           <div className="grid lg:grid-cols-12 gap-4 mb-20">
-            <article className="lg:col-span-8 package-card package-card-vip border border-gold/35 bg-background/80 p-7 lg:p-10">
+            <article className="lg:col-span-8 border border-gold/35 bg-background/80 p-7 lg:p-10">
               <p className="eyebrow mb-3">{t.packagesSection.vipLabel}</p>
               <h3 className="display text-cream text-3xl mb-2">
                 {vipPackage.name}
@@ -2413,7 +2405,7 @@ export default function Home() {
               </p>
             </article>
 
-            <article className="lg:col-span-4 package-card package-card-side border border-border bg-background/70 p-7 lg:p-8">
+            <article className="lg:col-span-4 border border-border bg-background/70 p-7 lg:p-8">
               <p className="eyebrow mb-3">
                 {t.packagesSection.additionalTitle}
               </p>
