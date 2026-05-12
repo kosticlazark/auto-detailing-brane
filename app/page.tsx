@@ -1880,6 +1880,7 @@ export default function Home() {
     "/gallery-4.jpg",
   ];
 
+  const languageStorageKey = "adb-lang";
   const [lang, setLang] = useState<Lang>("sl");
   const t = i18n[lang];
 
@@ -1907,10 +1908,27 @@ export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [processProgress, setProcessProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [disableParallax, setDisableParallax] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState<number | null>(
     null,
   );
   const processSectionRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const savedLang = window.localStorage.getItem(languageStorageKey);
+
+    if (
+      savedLang &&
+      languageOptions.some((option) => option.code === savedLang)
+    ) {
+      setLang(savedLang as Lang);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(languageStorageKey, lang);
+  }, [lang]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -1935,7 +1953,7 @@ export default function Home() {
           const rect = processSection.getBoundingClientRect();
           const viewportHeight = window.innerHeight || 1;
           const start = viewportHeight * 0.84;
-          const end = -rect.height * 0.34;
+          const end = -rect.height * 0.65;
           const rawProgress = (start - rect.top) / (start - end);
           const clampedProgress = Math.min(1, Math.max(0, rawProgress));
 
@@ -1973,6 +1991,57 @@ export default function Home() {
       mediaQuery.removeEventListener("change", applyPreference);
     };
   }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 1024px)");
+
+    const applyBreakpoint = () => {
+      setDisableParallax(mediaQuery.matches);
+    };
+
+    applyBreakpoint();
+    mediaQuery.addEventListener("change", applyBreakpoint);
+
+    return () => {
+      mediaQuery.removeEventListener("change", applyBreakpoint);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => {
+      if (mediaQuery.matches) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    closeOnDesktop();
+    mediaQuery.addEventListener("change", closeOnDesktop);
+
+    return () => {
+      mediaQuery.removeEventListener("change", closeOnDesktop);
+    };
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     if (activeGalleryIndex === null) return;
@@ -2029,13 +2098,21 @@ export default function Home() {
     };
   }, []);
 
-  const heroParallax = Math.min(scrollY * 0.16, 130);
-  const orbParallaxA = Math.min(scrollY * 0.1, 180);
-  const orbParallaxB = Math.min(scrollY * 0.06, 140);
-  const servicesParallax = Math.min(Math.max((scrollY - 260) * 0.04, 0), 56);
-  const packagesParallax = Math.min(Math.max((scrollY - 760) * -0.032, -52), 0);
-  const galleryParallax = Math.min(Math.max((scrollY - 1380) * 0.035, 0), 64);
-  const contactParallax = Math.min(Math.max((scrollY - 2300) * -0.03, -44), 0);
+  const heroParallax = disableParallax ? 0 : Math.min(scrollY * 0.16, 130);
+  const orbParallaxA = disableParallax ? 0 : Math.min(scrollY * 0.1, 180);
+  const orbParallaxB = disableParallax ? 0 : Math.min(scrollY * 0.06, 140);
+  const servicesParallax = disableParallax
+    ? 0
+    : Math.min(Math.max((scrollY - 260) * 0.04, 0), 56);
+  const packagesParallax = disableParallax
+    ? 0
+    : Math.min(Math.max((scrollY - 760) * -0.032, -52), 0);
+  const galleryParallax = disableParallax
+    ? 0
+    : Math.min(Math.max((scrollY - 1380) * 0.035, 0), 64);
+  const contactParallax = disableParallax
+    ? 0
+    : Math.min(Math.max((scrollY - 2300) * -0.03, -44), 0);
 
   const goToNextGallery = () => {
     setActiveGalleryIndex((prev) => {
@@ -2073,13 +2150,13 @@ export default function Home() {
         />
       </div>
 
-      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/70 border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 py-5 flex items-center justify-between">
+      <nav className="fixed top-0 left-0 right-0 z-[90] backdrop-blur-md bg-background/70 border-b border-border">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 py-3 sm:py-5 flex items-center justify-between gap-2 sm:gap-4">
           <a href="#top" className="flex items-baseline gap-2">
-            <span className="display text-cream text-lg tracking-[0.04em]">
+            <span className="display text-cream text-sm sm:text-base lg:text-lg tracking-[0.04em]">
               AVTO DETAILING BRANE
             </span>
-            <span className="text-muted-foreground text-xs tracking-[0.2em]">
+            <span className="hidden sm:inline text-muted-foreground text-xs tracking-[0.2em]">
               S.P.
             </span>
           </a>
@@ -2103,16 +2180,105 @@ export default function Home() {
               {t.nav.contact}
             </a>
           </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="lang" className="sr-only">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden lg:block">
+              <label htmlFor="lang" className="sr-only">
+                {t.languageLabel}
+              </label>
+              <select
+                id="lang"
+                name="lang"
+                value={lang}
+                onChange={(e) => setLang(e.target.value as Lang)}
+                className="bg-background/80 border border-input pl-3 pr-7 py-[0.6rem] text-[0.68rem] tracking-[0.14em] text-cream uppercase focus:outline-none focus:border-gold"
+                aria-label={t.languageLabel}
+              >
+                {languageOptions.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <a
+              href="#kontakt"
+              className="hidden lg:inline-block btn-gold !py-[0.6rem] !px-4 text-[0.68rem]"
+            >
+              {t.nav.reserve}
+            </a>
+            <button
+              type="button"
+              className="lg:hidden hamburger-button"
+              aria-label="Open navigation menu"
+              aria-expanded={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            >
+              <span
+                className={`hamburger-line ${isMobileMenuOpen ? "is-open" : ""}`}
+              />
+              <span
+                className={`hamburger-line ${isMobileMenuOpen ? "is-open" : ""}`}
+              />
+              <span
+                className={`hamburger-line ${isMobileMenuOpen ? "is-open" : ""}`}
+              />
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <div
+        className={`lg:hidden mobile-menu-shell ${isMobileMenuOpen ? "is-open" : ""}`}
+      >
+        <button
+          type="button"
+          className="mobile-menu-backdrop"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Close navigation menu"
+        />
+        <div
+          className="mobile-menu-panel"
+          onClickCapture={(event) => {
+            if ((event.target as HTMLElement).closest("a")) {
+              setIsMobileMenuOpen(false);
+            }
+          }}
+        >
+          <div className="grid gap-3 text-xs tracking-[0.18em] uppercase">
+            <a href="#storitve" className="mobile-menu-link">
+              {t.nav.services}
+            </a>
+            <a href="#paketi" className="mobile-menu-link">
+              {t.nav.packages}
+            </a>
+            <a href="#galerija" className="mobile-menu-link">
+              {t.nav.gallery}
+            </a>
+            <a href="#o-nas" className="mobile-menu-link">
+              {t.nav.about}
+            </a>
+            <a href="#mnenja" className="mobile-menu-link">
+              {t.nav.reviews}
+            </a>
+            <a href="#kontakt" className="mobile-menu-link">
+              {t.nav.contact}
+            </a>
+          </div>
+
+          <a href="#kontakt" className="btn-gold mt-5 w-full text-center">
+            {t.nav.reserve}
+          </a>
+
+          <div className="mt-auto pt-6 border-t border-border">
+            <label htmlFor="lang-mobile" className="eyebrow block mb-2">
               {t.languageLabel}
             </label>
             <select
-              id="lang"
-              name="lang"
+              id="lang-mobile"
+              name="lang-mobile"
               value={lang}
               onChange={(e) => setLang(e.target.value as Lang)}
-              className="bg-background/80 border border-input px-3 py-2 text-[0.7rem] tracking-[0.15em] text-cream uppercase focus:outline-none focus:border-gold"
+              className="mobile-menu-language w-full bg-background/80 border border-input px-3 py-3 text-xs tracking-[0.12em] text-cream uppercase focus:outline-none focus:border-gold"
               aria-label={t.languageLabel}
             >
               {languageOptions.map((option) => (
@@ -2121,16 +2287,13 @@ export default function Home() {
                 </option>
               ))}
             </select>
-            <a href="#kontakt" className="btn-gold !py-3 !px-5 text-[0.7rem]">
-              {t.nav.reserve}
-            </a>
           </div>
         </div>
-      </nav>
+      </div>
 
       <section
         id="top"
-        className="relative min-h-screen flex items-end overflow-hidden"
+        className="relative min-h-[92svh] sm:min-h-screen flex items-end overflow-hidden"
       >
         <Image
           src="/hero-car.jpg"
@@ -2145,17 +2308,17 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/40" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-background/40" />
 
-        <div className="relative w-full max-w-[1400px] mx-auto px-6 lg:px-12 pb-16 lg:pb-24 pt-32 grid lg:grid-cols-12 gap-10 items-end">
+        <div className="relative w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pb-12 sm:pb-16 lg:pb-24 pt-28 sm:pt-32 grid lg:grid-cols-12 gap-8 sm:gap-10 items-end">
           <div className="lg:col-span-8 reveal reveal-1">
-            <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center gap-3 mb-6 sm:mb-8">
               <span className="hairline" />
               <span className="eyebrow">{t.hero.badge}</span>
             </div>
             <h1 className="text-cream">
-              <span className="serif-italic block text-3xl md:text-5xl text-cream/80 mb-3">
+              <span className="serif-italic block text-2xl sm:text-3xl md:text-5xl text-cream/80 mb-2 sm:mb-3">
                 {t.hero.lead}
               </span>
-              <span className="display block text-[3.2rem] md:text-[5.5rem] lg:text-[7rem]">
+              <span className="display block text-[2.35rem] sm:text-[3.2rem] md:text-[5.5rem] lg:text-[7rem] leading-[0.9]">
                 {t.hero.l1}
                 <br />
                 {t.hero.l2}
@@ -2163,14 +2326,20 @@ export default function Home() {
                 <span className="text-gold">{t.hero.l3}</span>
               </span>
             </h1>
-            <p className="mt-8 max-w-lg text-muted-foreground text-base leading-relaxed">
+            <p className="mt-6 sm:mt-8 max-w-lg text-muted-foreground text-sm sm:text-base leading-relaxed">
               {t.hero.desc}
             </p>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <a href="#kontakt" className="btn-gold">
+            <div className="mt-8 sm:mt-10 flex flex-wrap gap-3 sm:gap-4">
+              <a
+                href="#kontakt"
+                className="btn-gold w-full sm:w-auto text-center"
+              >
                 {t.nav.reserve}
               </a>
-              <a href="#storitve" className="btn-ghost">
+              <a
+                href="#storitve"
+                className="btn-ghost w-full sm:w-auto text-center"
+              >
                 {t.hero.ctaServices}
               </a>
             </div>
@@ -2198,7 +2367,7 @@ export default function Home() {
       </section>
 
       <section className="border-y border-border">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid md:grid-cols-3">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 grid md:grid-cols-3">
           {pillars.map((it, i) => (
             <div
               key={it.t}
@@ -2217,9 +2386,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="storitve" className="py-24 lg:py-36">
+      <section id="storitve" className="py-20 sm:py-24 lg:py-36">
         <div
-          className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
+          className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 parallax-layer"
           style={{ transform: `translate3d(0, ${servicesParallax}px, 0)` }}
         >
           <div className="grid lg:grid-cols-12 gap-10 mb-16">
@@ -2281,10 +2450,10 @@ export default function Home() {
 
       <section
         id="paketi"
-        className="py-24 lg:py-36 border-y border-border bg-card/20"
+        className="py-20 sm:py-24 lg:py-36 border-y border-border bg-card/20"
       >
         <div
-          className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
+          className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 parallax-layer"
           style={{ transform: `translate3d(0, ${packagesParallax}px, 0)` }}
         >
           <div className="grid lg:grid-cols-12 gap-10 mb-16">
@@ -2442,20 +2611,67 @@ export default function Home() {
 
       <section
         ref={processSectionRef}
-        className="py-24 lg:py-32 border-y border-border bg-card/30"
+        className="py-24 sm:py-28 lg:py-32 border-y border-border bg-card/30"
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="flex items-center gap-3 mb-12">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12">
+          <div className="flex items-center gap-3 mb-8 sm:mb-12">
             <span className="hairline" />
             <span className="eyebrow">{t.processSection.eyebrow}</span>
           </div>
-          <div className="process-progress" aria-hidden="true">
+          <div className="process-progress hidden md:block" aria-hidden="true">
             <span
               className="process-progress-fill"
               style={{ transform: `scaleX(${0.08 + processProgress * 0.92})` }}
             />
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
+
+          <div className="md:hidden grid gap-4 sm:gap-5 mt-2">
+            <div
+              className="absolute left-8 top-[6.4rem] bottom-8 w-px bg-border/70"
+              aria-hidden="true"
+            />
+            <div className="space-y-4 sm:space-y-5 relative">
+              {processSteps.map((s, i) => {
+                const stepProgress = Math.max(
+                  0,
+                  Math.min(1, (processProgress - i * 0.2) / 0.33),
+                );
+                const translateY = 18 - stepProgress * 18;
+                const scale = 0.98 + stepProgress * 0.02;
+                const opacity = 0.55 + stepProgress * 0.45;
+
+                return (
+                  <div
+                    key={s.n}
+                    className={`process-step-card bg-background/95 border border-border p-6 sm:p-7 rounded-sm relative pl-14 ${stepProgress > 0.95 ? "is-active" : ""}`}
+                    style={
+                      prefersReducedMotion || disableParallax
+                        ? undefined
+                        : {
+                            transform: `translate3d(0, ${translateY}px, 0) scale(${scale})`,
+                            opacity,
+                            filter: `blur(${(1 - stepProgress) * 1.2}px)`,
+                          }
+                    }
+                  >
+                    <span
+                      className="absolute left-6 top-8 h-3 w-3 rounded-full bg-gold"
+                      aria-hidden="true"
+                    />
+                    <div className="serif-italic text-gold text-3xl mb-3">
+                      {s.n}
+                    </div>
+                    <h4 className="display text-cream text-xl mb-3">{s.t}</h4>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {s.d}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
             {processSteps.map((s, i) => {
               const stepProgress = Math.max(
                 0,
@@ -2470,7 +2686,7 @@ export default function Home() {
                   key={s.n}
                   className={`process-step-card bg-background p-8 lg:p-10 ${stepProgress > 0.95 ? "is-active" : ""}`}
                   style={
-                    prefersReducedMotion
+                    prefersReducedMotion || disableParallax
                       ? undefined
                       : {
                           transform: `translate3d(0, ${translateY}px, 0) scale(${scale})`,
@@ -2493,9 +2709,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="galerija" className="py-24 lg:py-36">
+      <section id="galerija" className="py-20 sm:py-24 lg:py-36">
         <div
-          className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
+          className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 parallax-layer"
           style={{ transform: `translate3d(0, ${galleryParallax}px, 0)` }}
         >
           <div className="grid lg:grid-cols-12 gap-10 mb-16">
@@ -2535,9 +2751,7 @@ export default function Home() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-80" />
-                <div className="gallery-tile-action" aria-hidden="true">
-                  Fullscreen
-                </div>
+                <div className="gallery-tile-action" aria-hidden="true" />
                 <button
                   type="button"
                   className="gallery-open-button"
@@ -2572,7 +2786,32 @@ export default function Home() {
               className="gallery-lightbox-close"
               onClick={() => setActiveGalleryIndex(null)}
             >
-              Close
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                aria-hidden="true"
+              >
+                <line
+                  x1="1"
+                  y1="1"
+                  x2="13"
+                  y2="13"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="13"
+                  y1="1"
+                  x2="1"
+                  y2="13"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
 
             <button
@@ -2610,8 +2849,11 @@ export default function Home() {
         </div>
       )}
 
-      <section id="o-nas" className="py-24 lg:py-36 border-y border-border">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 grid lg:grid-cols-12 gap-12 items-center">
+      <section
+        id="o-nas"
+        className="py-20 sm:py-24 lg:py-36 border-y border-border"
+      >
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 grid lg:grid-cols-12 gap-10 sm:gap-12 items-center">
           <div className="lg:col-span-5">
             <div className="relative aspect-[3/4] overflow-hidden border border-gold/20">
               <Image
@@ -2686,8 +2928,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="mnenja" className="py-24 lg:py-36">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+      <section id="mnenja" className="py-20 sm:py-24 lg:py-36">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12">
           <div className="flex items-center gap-3 mb-6">
             <span className="hairline" />
             <span className="eyebrow">{t.reviewsSection.eyebrow}</span>
@@ -2728,28 +2970,34 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-24 lg:py-32 border-y border-border bg-card/40">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
+      <section className="py-20 sm:py-24 lg:py-32 border-y border-border bg-card/40">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 text-center">
           <p className="serif-italic text-cream/70 text-3xl md:text-4xl mb-2">
             {t.ctaSection.top}
           </p>
           <h2 className="display text-cream text-5xl md:text-7xl mb-10">
             {t.ctaSection.bottom}
           </h2>
-          <div className="flex flex-wrap justify-center gap-4">
-            <a href="#kontakt" className="btn-gold">
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            <a
+              href="#kontakt"
+              className="btn-gold w-full sm:w-auto text-center"
+            >
               {t.nav.reserve}
             </a>
-            <a href="tel:031014910" className="btn-ghost">
+            <a
+              href="tel:031014910"
+              className="btn-ghost w-full sm:w-auto text-center"
+            >
               031 014 910
             </a>
           </div>
         </div>
       </section>
 
-      <section id="kontakt" className="py-24 lg:py-36">
+      <section id="kontakt" className="py-20 sm:py-24 lg:py-36">
         <div
-          className="max-w-[1400px] mx-auto px-6 lg:px-12 parallax-layer"
+          className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 parallax-layer"
           style={{ transform: `translate3d(0, ${contactParallax}px, 0)` }}
         >
           <div className="flex items-center gap-3 mb-6">
@@ -2781,7 +3029,7 @@ export default function Home() {
                 <p className="eyebrow mb-2">{t.contactSection.phoneLabel}</p>
                 <a
                   href="tel:+38631014910"
-                  className="display text-gold text-3xl hover:opacity-80 transition"
+                  className="display text-gold text-2xl sm:text-3xl hover:opacity-80 transition break-all"
                 >
                   +386 31 014 910
                 </a>
@@ -2870,11 +3118,16 @@ export default function Home() {
                 <select
                   id="service"
                   name="service"
-                  className="w-full bg-background border border-input px-4 py-3 text-cream focus:outline-none focus:border-gold transition"
+                  defaultValue=""
+                  className="contact-select w-full bg-background border border-input pl-4 pr-12 py-3 text-cream focus:outline-none focus:border-gold transition"
                 >
-                  <option>{t.contactSection.servicePlaceholder}</option>
+                  <option value="" disabled>
+                    {t.contactSection.servicePlaceholder}
+                  </option>
                   {t.contactSection.serviceOptions.map((option) => (
-                    <option key={option}>{option}</option>
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -2899,8 +3152,8 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-12">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 flex flex-col md:flex-row justify-between gap-6 items-start md:items-center">
+      <footer className="border-t border-border py-10 sm:py-12">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 flex flex-col md:flex-row justify-between gap-6 items-start md:items-center">
           <div>
             <p className="display text-cream text-lg">AVTO DETAILING BRANE</p>
             <p className="text-muted-foreground text-xs mt-1">{t.footer.sub}</p>
