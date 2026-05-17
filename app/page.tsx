@@ -278,8 +278,8 @@ export default function Home() {
         eyebrow: "Branislav Javorski s.p.",
         titleTop: "O nas",
         titleBottom: "Strast do\navtomobilov.",
-        p1: "Sem Branislav Javorski, lastnik in edini detajler pri Avto Detailing Brane v Novem mestu. Detajliranje je moja strast — danes pa jo živim poklicno, z vsem kar imam.",
-        p2: "Vsak avto dobim sam, z lastnimi rokami. Vsako vozilo dobi vso mojo pozornost — od prvega pranja do zadnje kapljice keramičnega premaza. Delam z najboljšo tehnologijo in ekološko prijaznimi produkti.",
+        p1: "Pri Avto Detailing Brane avtomobilom vračamo popolnost. Naša strast do detailinga, natančnost pri vsakem koraku in uporaba vrhunskih profesionalnih izdelkov zagotavljajo rezultate, ki presegajo pričakovanja. Specializirani smo za celovito nego in zaščito vozil - od temeljitega globinskega čiščenja notranjosti, profesionalnega poliranja laka in obnove sijaja, do naprednih zaščitnih premazov, ki vašemu vozilu zagotavljajo dolgotrajno zaščito in brezhiben videz.",
+        p2: "Vsak avtomobil obravnavamo individualno, z največjo mero skrbnosti in pozornosti do najmanjših detajlov. Naš cilj ni le čist in sijoč avtomobil, temveč občutek ponosa in zadovoljstva vsakič, ko sedete za volan. Zaupanje naših strank gradimo na kakovosti, doslednosti in profesionalnem pristopu, saj verjamemo, da je pravi detailing več kot storitev - je predanost popolnosti. Avto Detailing Brane - kjer natančnost, kakovost in strast ustvarjajo popoln videz vašega vozila.",
         locationLabel: "Lokacija",
         phoneLabel: "Telefon",
         hoursLabel: "Delovni čas",
@@ -1935,8 +1935,9 @@ export default function Home() {
         if (processSection) {
           const rect = processSection.getBoundingClientRect();
           const viewportHeight = window.innerHeight || 1;
-          const start = viewportHeight * 0.84;
-          const end = -rect.height * 0.65;
+          const start = viewportHeight * 0.88;
+          // Finish progress earlier so the last step reaches full state in view.
+          const end = -rect.height * 0.2;
           const rawProgress = (start - rect.top) / (start - end);
           const clampedProgress = Math.min(1, Math.max(0, rawProgress));
 
@@ -2621,7 +2622,7 @@ export default function Home() {
                 );
                 const translateY = 18 - stepProgress * 18;
                 const scale = 0.98 + stepProgress * 0.02;
-                const opacity = 0.55 + stepProgress * 0.45;
+                const opacity = 0.72 + stepProgress * 0.28;
 
                 return (
                   <div
@@ -2633,7 +2634,7 @@ export default function Home() {
                         : {
                             transform: `translate3d(0, ${translateY}px, 0) scale(${scale})`,
                             opacity,
-                            filter: `blur(${(1 - stepProgress) * 1.2}px)`,
+                            filter: `blur(${(1 - stepProgress) * 0.5}px)`,
                           }
                     }
                   >
@@ -2662,7 +2663,7 @@ export default function Home() {
               );
               const translateY = 40 - stepProgress * 40;
               const scale = 0.96 + stepProgress * 0.04;
-              const opacity = 0.22 + stepProgress * 0.78;
+              const opacity = 0.62 + stepProgress * 0.38;
 
               return (
                 <div
@@ -2674,7 +2675,7 @@ export default function Home() {
                       : {
                           transform: `translate3d(0, ${translateY}px, 0) scale(${scale})`,
                           opacity,
-                          filter: `blur(${(1 - stepProgress) * 6}px)`,
+                          filter: `blur(${(1 - stepProgress) * 1.6}px)`,
                         }
                   }
                 >
@@ -2734,7 +2735,6 @@ export default function Home() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-80" />
-                <div className="gallery-tile-action" aria-hidden="true" />
                 <button
                   type="button"
                   className="gallery-open-button"
@@ -2803,7 +2803,21 @@ export default function Home() {
               onClick={goToPrevGallery}
               aria-label="Previous image"
             >
-              ‹
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
 
             <div className="gallery-lightbox-media">
@@ -2822,7 +2836,21 @@ export default function Home() {
               onClick={goToNextGallery}
               aria-label="Next image"
             >
-              ›
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M9 18L15 12L9 6"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
 
             <p className="gallery-lightbox-caption">
