@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import Testimonials from "@/components/ui/testimonials-demo";
 
 export default function Home() {
@@ -1893,10 +1899,13 @@ export default function Home() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [disableParallax, setDisableParallax] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isPackagesInView, setIsPackagesInView] = useState(false);
+  const [activePackageId, setActivePackageId] = useState<string | null>(null);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState<number | null>(
     null,
   );
   const processSectionRef = useRef<HTMLElement | null>(null);
+  const packagesSectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const savedLang = window.localStorage.getItem(languageStorageKey);
@@ -2082,6 +2091,36 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    const section = packagesSectionRef.current;
+
+    if (!section) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setIsPackagesInView(true);
+            observer.disconnect();
+            break;
+          }
+        }
+      },
+      {
+        threshold: 0.16,
+        rootMargin: "0px 0px -10% 0px",
+      },
+    );
+
+    observer.observe(section);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   const heroParallax = disableParallax ? 0 : Math.min(scrollY * 0.16, 130);
   const orbParallaxA = disableParallax ? 0 : Math.min(scrollY * 0.1, 180);
   const orbParallaxB = disableParallax ? 0 : Math.min(scrollY * 0.06, 140);
@@ -2110,6 +2149,38 @@ export default function Home() {
       if (prev === null) return prev;
       return (prev - 1 + gallery.length) % gallery.length;
     });
+  };
+
+  const toggleActivePackage = (packageId: string) => {
+    setActivePackageId((prev) => (prev === packageId ? null : packageId));
+  };
+
+  const handlePackageMouseMove = (event: ReactMouseEvent<HTMLElement>) => {
+    if (prefersReducedMotion) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+    event.currentTarget.style.setProperty("--pkgx", `${x}%`);
+    event.currentTarget.style.setProperty("--pkgy", `${y}%`);
+  };
+
+  const handlePackageMouseLeave = (event: ReactMouseEvent<HTMLElement>) => {
+    event.currentTarget.style.setProperty("--pkgx", "50%");
+    event.currentTarget.style.setProperty("--pkgy", "0%");
+  };
+
+  const handlePackageKeyDown = (
+    event: ReactKeyboardEvent<HTMLElement>,
+    packageId: string,
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleActivePackage(packageId);
+    }
   };
 
   return (
@@ -2434,10 +2505,16 @@ export default function Home() {
 
       <section
         id="paketi"
-        className="py-20 sm:py-24 lg:py-36 border-y border-border bg-card/20"
+        ref={packagesSectionRef}
+        className={`packages-section py-20 sm:py-24 lg:py-36 border-y border-border bg-card/20 relative overflow-hidden ${isPackagesInView ? "packages-in-view" : ""}`}
       >
+        <div className="packages-ambient" aria-hidden="true">
+          <span className="packages-orb packages-orb-a" />
+          <span className="packages-orb packages-orb-b" />
+          <span className="packages-grid-glow" />
+        </div>
         <div
-          className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 parallax-layer"
+          className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 parallax-layer relative z-10"
           style={{ transform: `translate3d(0, ${packagesParallax}px, 0)` }}
         >
           <div className="grid lg:grid-cols-12 gap-10 mb-16">
@@ -2470,30 +2547,47 @@ export default function Home() {
               <span className="eyebrow">{t.packagesSection.cleaningTitle}</span>
             </div>
             <div className="grid lg:grid-cols-3 gap-4">
-              {cleaningPackages.map((pkg, idx) => (
-                <article
-                  key={pkg.name}
-                  className="reveal border border-border bg-background/70 p-6 lg:p-7"
-                  style={{
-                    animationDelay: `${140 + idx * 100}ms`,
-                  }}
-                >
-                  <h3 className="display text-cream text-2xl mb-5">
-                    {pkg.name}
-                  </h3>
-                  <ul className="space-y-3">
-                    {pkg.items.map((item) => (
-                      <li
-                        key={item}
-                        className="text-sm text-cream/85 flex gap-3 leading-relaxed"
-                      >
-                        <span className="text-gold">✓</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
+              {cleaningPackages.map((pkg, idx) => {
+                const packageId = `clean-${idx}`;
+                const isSelected = activePackageId === packageId;
+
+                return (
+                  <article
+                    key={pkg.name}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    className={`package-reveal package-card border border-border bg-background/70 p-6 lg:p-7 ${isSelected ? "is-selected" : ""}`}
+                    style={{
+                      transitionDelay: `${140 + idx * 90}ms`,
+                    }}
+                    onMouseMove={handlePackageMouseMove}
+                    onMouseLeave={handlePackageMouseLeave}
+                    onClick={() => toggleActivePackage(packageId)}
+                    onKeyDown={(event) =>
+                      handlePackageKeyDown(event, packageId)
+                    }
+                  >
+                    <span className="package-card-index" aria-hidden="true">
+                      0{idx + 1}
+                    </span>
+                    <h3 className="display text-cream text-2xl mb-5">
+                      {pkg.name}
+                    </h3>
+                    <ul className="space-y-3">
+                      {pkg.items.map((item) => (
+                        <li
+                          key={item}
+                          className="package-item text-sm text-cream/85 flex gap-3 leading-relaxed"
+                        >
+                          <span className="package-item-mark text-gold">✓</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                );
+              })}
             </div>
           </div>
 
@@ -2503,35 +2597,62 @@ export default function Home() {
               <span className="eyebrow">{t.packagesSection.polishTitle}</span>
             </div>
             <div className="grid lg:grid-cols-3 gap-4">
-              {polishPackages.map((pkg, idx) => (
-                <article
-                  key={pkg.name}
-                  className="reveal border border-border bg-background/70 p-6 lg:p-7"
-                  style={{
-                    animationDelay: `${160 + idx * 100}ms`,
-                  }}
-                >
-                  <h3 className="display text-cream text-2xl mb-5">
-                    {pkg.name}
-                  </h3>
-                  <ul className="space-y-3">
-                    {pkg.items.map((item) => (
-                      <li
-                        key={item}
-                        className="text-sm text-cream/85 flex gap-3 leading-relaxed"
-                      >
-                        <span className="text-gold">✓</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
+              {polishPackages.map((pkg, idx) => {
+                const packageId = `polish-${idx}`;
+                const isSelected = activePackageId === packageId;
+
+                return (
+                  <article
+                    key={pkg.name}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    className={`package-reveal package-card border border-border bg-background/70 p-6 lg:p-7 ${isSelected ? "is-selected" : ""}`}
+                    style={{
+                      transitionDelay: `${430 + idx * 90}ms`,
+                    }}
+                    onMouseMove={handlePackageMouseMove}
+                    onMouseLeave={handlePackageMouseLeave}
+                    onClick={() => toggleActivePackage(packageId)}
+                    onKeyDown={(event) =>
+                      handlePackageKeyDown(event, packageId)
+                    }
+                  >
+                    <span className="package-card-index" aria-hidden="true">
+                      0{idx + 1}
+                    </span>
+                    <h3 className="display text-cream text-2xl mb-5">
+                      {pkg.name}
+                    </h3>
+                    <ul className="space-y-3">
+                      {pkg.items.map((item) => (
+                        <li
+                          key={item}
+                          className="package-item text-sm text-cream/85 flex gap-3 leading-relaxed"
+                        >
+                          <span className="package-item-mark text-gold">✓</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                );
+              })}
             </div>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-4 mb-20">
-            <article className="lg:col-span-8 border border-gold/35 bg-background/80 p-7 lg:p-10">
+            <article
+              role="button"
+              tabIndex={0}
+              aria-pressed={activePackageId === "vip"}
+              className={`lg:col-span-8 package-reveal package-vip-card border border-gold/35 bg-background/80 p-7 lg:p-10 ${activePackageId === "vip" ? "is-selected" : ""}`}
+              style={{ transitionDelay: "720ms" }}
+              onMouseMove={handlePackageMouseMove}
+              onMouseLeave={handlePackageMouseLeave}
+              onClick={() => toggleActivePackage("vip")}
+              onKeyDown={(event) => handlePackageKeyDown(event, "vip")}
+            >
               <p className="eyebrow mb-3">{t.packagesSection.vipLabel}</p>
               <h3 className="display text-cream text-3xl mb-2">
                 {vipPackage.name}
@@ -2543,9 +2664,9 @@ export default function Home() {
                 {vipPackage.items.map((item) => (
                   <li
                     key={item}
-                    className="text-sm text-cream/90 flex gap-3 leading-relaxed"
+                    className="package-item text-sm text-cream/90 flex gap-3 leading-relaxed"
                   >
-                    <span className="text-gold">✓</span>
+                    <span className="package-item-mark text-gold">✓</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -2558,7 +2679,19 @@ export default function Home() {
               </p>
             </article>
 
-            <article className="lg:col-span-4 border border-border bg-background/70 p-7 lg:p-8">
+            <article
+              role="button"
+              tabIndex={0}
+              aria-pressed={activePackageId === "extra-services"}
+              className={`lg:col-span-4 package-reveal package-side-card border border-border bg-background/70 p-7 lg:p-8 ${activePackageId === "extra-services" ? "is-selected" : ""}`}
+              style={{ transitionDelay: "800ms" }}
+              onMouseMove={handlePackageMouseMove}
+              onMouseLeave={handlePackageMouseLeave}
+              onClick={() => toggleActivePackage("extra-services")}
+              onKeyDown={(event) =>
+                handlePackageKeyDown(event, "extra-services")
+              }
+            >
               <p className="eyebrow mb-3">
                 {t.packagesSection.additionalTitle}
               </p>
@@ -2569,7 +2702,7 @@ export default function Home() {
                 {additionalServices.map((service) => (
                   <div
                     key={service.name}
-                    className="border-t border-border pt-4 first:border-t-0 first:pt-0"
+                    className="package-side-group border-t border-border pt-4 first:border-t-0 first:pt-0"
                   >
                     <p className="text-cream font-medium mb-3">
                       {service.name}
@@ -2578,9 +2711,9 @@ export default function Home() {
                       {service.items.map((item) => (
                         <li
                           key={item}
-                          className="text-xs text-cream/80 flex gap-3 leading-relaxed"
+                          className="package-item text-xs text-cream/80 flex gap-3 leading-relaxed"
                         >
-                          <span className="text-gold">✓</span>
+                          <span className="package-item-mark text-gold">✓</span>
                           <span>{item}</span>
                         </li>
                       ))}
