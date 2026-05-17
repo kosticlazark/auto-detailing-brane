@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import Testimonials from "@/components/ui/testimonials-demo";
 
 export default function Home() {
   type Lang = "sl" | "mk" | "sr" | "hr" | "en" | "it";
@@ -1855,24 +1856,6 @@ export default function Home() {
     },
   } as const;
 
-  const reviews = [
-    {
-      text: "Avto je šel k njemu kot na wellness vikend, prišel nazaj pa kot da je naredil 3 tedne detoxa, masaže, savne in še facelift zraven. Brez pripomb, samo čista zmaga!",
-      name: "M. S.",
-      initials: "MS",
-    },
-    {
-      text: "Gospodu Branetu dajem kapo dol — mi je avto očistil znotraj in zunaj, spoliral in dal keramično zaščito. Avto zgleda kot NOV. ZELO PRIPOROČAM.",
-      name: "A. R.",
-      initials: "AR",
-    },
-    {
-      text: "Avto je star 19 let in je že spet kot nov. Hvala Braneta zato ker je hitro in zelo lepo zrihtal moj BOLiD da je spet kot nov.",
-      name: "I. B.",
-      initials: "IB",
-    },
-  ];
-
   const galleryImages = [
     "/gallery-1.jpg",
     "/gallery-2.jpg",
@@ -2945,28 +2928,7 @@ export default function Home() {
             </span>
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-px bg-border">
-            {reviews.map((r) => (
-              <article
-                key={r.name}
-                className="bg-background p-8 lg:p-10 flex flex-col"
-              >
-                <div className="text-gold tracking-[0.3em] mb-6">★★★★★</div>
-                <p className="text-cream/90 text-base leading-relaxed flex-1 italic">
-                  "{r.text}"
-                </p>
-                <div className="mt-8 pt-6 border-t border-border flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full border border-gold/40 flex items-center justify-center text-gold text-xs tracking-wider">
-                    {r.initials}
-                  </div>
-                  <div>
-                    <p className="text-cream text-sm">{r.name}</p>
-                    <p className="eyebrow text-[0.6rem]">Google · 2026</p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          <Testimonials />
         </div>
       </section>
 
